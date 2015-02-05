@@ -1,0 +1,89 @@
+usage() {
+	echo "Usage: ${0##*/} [-h] [-k jobID]"
+}
+show_help() {
+	usage
+	cat << EOF
+Check the scripts/program running with the run program (jobID, date, state and name) or kill them.
+	-h | --help		display this help and exit
+	-c | --childTree		display all the jobID of all the childs of the run processes
+	-k | --kill	jobID		kill the job with the given ID(s). All args after this are considered jobIDs.
+EOF
+}
+
+# Function to search the whole process tree 
+childsTree() {
+	ppid=$1
+	while true
+	do 
+	    forloop=FALSE
+	    for i in `ps -ef | awk '$3 == '$ppid' {print $2}'`
+	    do 
+	       echo $i 
+	       forloop=TRUE
+	    done
+	    ppid=$i
+
+	    if [ "$forloop" = "FALSE" ]; then
+	       exit
+	    fi
+	 done
+}
+
+# Parse arguments
+while [ $# -ne 0 ];
+do
+	opt=$1
+	shift
+	case "$opt" in
+		"-h" | "--help"		)	show_help 1>&2
+								exit 0
+								;;
+		"-c" | "--childTree")	COMPLETE="\t\tchilds"
+								break
+								;;
+		"-k" | "--kill"		)	KILL=$@
+								break
+								;;
+		-*				)	echo "$opt: Invalid option"
+								exit 1
+								;;
+	esac
+done
+
+
+## if removed, recover the job folder
+mkdir -p ${PROGRAM_PATH}/jobs
+
+if [ -z "${KILL}" ]; then
+	echo -e "jobID\t\tstate\tstart\t\tat\t\tname${COMPLETE}"
+	echo "-------------------------------------------------------------------------------"
+	for job in `ls ${PROGRAM_PATH}/jobs/*.run 2> /dev/null`;
+	do
+		jobID=$(basename ${job%.*})
+		run=`ps x | awk '{print $1}' | grep ^$jobID`
+		if [ "$run" != "" ]; then
+			if [ ! -z ${COMPLETE} ]; then outChilds=$(childsTree $jobID); outChilds=`echo $outChilds | awk '{OFS=",";$1 = $1;print $0}'`; fi
+			awk -v c=$outChilds 'BEGIN{OFS="\t"};{$6="\t"c;$2="\tr";print $0}' $job
+		else
+			awk 'BEGIN{OFS="\t"};{$2="\tf";print $0}' $job
+			rm $job
+		fi
+
+	done
+else
+	for jobID in $KILL;
+	do
+		if [ -f  ${PROGRAM_PATH}/jobs/${jobID}.run ]; then
+			childs=$(childsTree $jobID)
+			kill -9 $childs $jobID
+			echo "Job $jobID killed"
+			rm ${PROGRAM_PATH}/jobs/${jobID}.run
+		else
+			echo "Job $jobID are not running"
+		fi
+	done
+fi
+
+exit 0
+
