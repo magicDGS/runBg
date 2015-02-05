@@ -13,10 +13,13 @@ For install, run:
 `sudo sh INSTALL.sh`
 
 If you want to install in a different folder:
+
 `sudo sh INSTALL.sh <PATH_TO_INSTALL>`
 
 Finally, add the folder to your PATH or make a soft link of the following files to your PATH:
+
 `ls -s <INSTALL_PATH>/run <PATH>`
+
 `ls -s <INSTALL_PATH>/j <PATH>`
 
 You could remove all the files in the folder except `j` and `run`.
@@ -28,7 +31,9 @@ You could remove all the files in the folder except `j` and `run`.
 The program provides two tools: `run`, that run a script/program in the background and store it's informations, and `j`, that check the status of the program. 
 
 For the arguments of each tool:
+
 `run --help`
+
 `j --help`
 
 ---
